@@ -1,3 +1,16 @@
+This is a fork of [tuomur'a excellent work](https://github.com/tuomur/celery_sqlalchemy_scheduler).  Dynamically deleting DatabaseSchedulerEntry added. 
+
+Deleting should be scheduled like;
+
+```python
+dbse = dbsession.query(DatabaseSchedulerEntry).filter(DatabaseSchedulerEntry.name == 'myTask').first()
+    if dbse:
+        dbse.mark_to_delete
+        dbsession.add(dbse)
+        dbsession.commit()
+```
+This will disable entry immediately and delete it in next _all_as_schedule.
+
 # What
 
 This repo contains my modification of the Celery Database Scheduler from

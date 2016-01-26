@@ -10,8 +10,10 @@ from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 from sqlalchemy.ext.declarative import declarative_base
 import sqlalchemy.event
 from celery import schedules
+from mConfig import SQLALCHEMY_DATABASE_URI
 
-engine = sqlalchemy.create_engine('sqlite://')
+engine = sqlalchemy.create_engine(SQLALCHEMY_DATABASE_URI)
+# engine = sqlalchemy.create_engine('sqlite://')
 Base = declarative_base(bind=engine)
 
 
@@ -99,12 +101,19 @@ class DatabaseSchedulerEntry(Base):
     routing_key = Column(String(255))
     expires = Column(DateTime)
     enabled = Column(Boolean, default=True)
+    delete_entry = Column(Boolean, default=False)
     last_run_at = Column(DateTime)
     total_run_count = Column(Integer, default=0)
     date_changed = Column(DateTime)
 
     interval = relationship(IntervalSchedule)
     crontab = relationship(CrontabSchedule)
+
+    @property
+    def mark_to_delete(self):
+        self.enabled = False
+        self.delete_entry = True
+        return self
 
     @property
     def args(self):
@@ -133,3 +142,10 @@ class DatabaseSchedulerEntry(Base):
 @sqlalchemy.event.listens_for(DatabaseSchedulerEntry, 'before_insert')
 def _set_entry_changed_date(mapper, connection, target):
     target.date_changed = datetime.datetime.utcnow()
+
+
+@sqlalchemy.event.listens_for(DatabaseSchedulerEntry, 'before_update')
+def _set_entry_edited_date(mapper, connection, target):
+    target.date_changed = datetime.datetime.utcnow()
+
+Base.metadata.create_all(engine)

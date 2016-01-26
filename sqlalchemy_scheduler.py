@@ -123,6 +123,14 @@ class DatabaseScheduler(Scheduler):
         self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
 
     def _all_as_schedule(self):
+        # Delete marked entries
+        toDelItems = dbsession.query(DatabaseSchedulerEntry).filter_by(delete_entry=True)
+        for toDel in toDelItems:
+            dbsession.query(CrontabSchedule).filter_by(id=toDel.crontab_id).delete()
+            dbsession.query(IntervalSchedule).filter_by(id=toDel.interval_id).delete()
+        # Finally delete DatabaseSchedulerEntries
+        dbsession.query(DatabaseSchedulerEntry).filter_by(delete_entry=True).delete()
+        dbsession.commit()
         s = {}
         query = dbsession.query(DatabaseSchedulerEntry)
         query = query.filter_by(enabled=True)
